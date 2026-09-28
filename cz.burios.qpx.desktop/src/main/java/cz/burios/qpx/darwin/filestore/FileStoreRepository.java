@@ -107,7 +107,7 @@ public class FileStoreRepository {
 
     private DynamicRecord read(TableMetaData meta, ResultSet rs) throws Exception {
         DynamicRecord record = new DynamicRecord(meta);
-        for (var column : meta.columns.values()) {
+        for (var column : meta.columns) {
             record.put(column.name, rs.getObject(column.name));
         }
         return record;
