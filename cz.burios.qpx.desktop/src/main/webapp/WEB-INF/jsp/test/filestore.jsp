@@ -42,7 +42,7 @@ function buildTree(roots){
   view:"qpTreeView",items:items,selectionMode:"single",
   onSelectionChanged:function(e){
    var key=e.selectedItemKeys&&e.selectedItemKeys.length?e.selectedItemKeys[0]:"__root__";
-   var item=e.selectedItems&&e.selectedItems.length?e.selectedItems[0]:null;
+   var item=items.find(function(x){return String(x.id)===String(key);});
    selectDirectory(key==="__root__"?null:key,key==="__root__"?"Kořen":(item?item.text:key));
   }
  },"#tree");
