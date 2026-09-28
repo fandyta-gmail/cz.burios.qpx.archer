@@ -2,6 +2,7 @@ package cz.burios.qpx.darwin.filestore;
 
 import java.io.DigestInputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HexFormat;
@@ -60,7 +61,7 @@ public class FileStoreService {
         boolean committed = false;
         try {
             String checksum = HexFormat.of().formatHex(digest.digest());
-            long actualSize = storage.open(storageKey).transferTo(java.io.OutputStream.nullOutputStream());
+            long actualSize = Files.size(storage.path(storageKey));
             if (actualSize != size) {
                 throw new IllegalArgumentException("File size mismatch");
             }
@@ -114,7 +115,7 @@ public class FileStoreService {
 
     private static void validateName(String name) {
         if (name == null || name.isBlank() || ".".equals(name) || "..".equals(name)
-                || name.contains("/") || name.contains("\") || name.length() > 255) {
+                || name.contains("/") || name.contains("\\") || name.length() > 255) {
             throw new IllegalArgumentException("Invalid file or directory name");
         }
     }
