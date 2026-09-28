@@ -19,6 +19,7 @@ public class FileStoreService {
     }
 
     public DynamicRecord createDirectory(String parentId, String name) throws Exception {
+        parentId = normalizeId(parentId);
         validateName(name);
         String id = newId();
         Instant now = Instant.now();
@@ -86,6 +87,10 @@ public class FileStoreService {
 
     public List<DynamicRecord> listFiles(String fileStoreId) throws Exception {
         return repository.listFiles(fileStoreId);
+    }
+
+    private static String normalizeId(String id) {
+        return id == null || id.isBlank() ? null : id;
     }
 
     private String newId() {
