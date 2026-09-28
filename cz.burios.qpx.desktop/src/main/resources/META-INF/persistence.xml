@@ -5,9 +5,9 @@
              version="3.1">
     <persistence-unit name="archer" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+        <non-jta-data-source>java:comp/env/jdbc/JPADataSource</non-jta-data-source>
         <class>cz.burios.qpx.darwin.model.FileStore</class>
         <class>cz.burios.qpx.darwin.model.FileStoreRecord</class>
-        <non-jta-data-source>java:comp/env/jdbc/JPADataSource</non-jta-data-source>
         <properties><property name="hibernate.hbm2ddl.auto" value="none"/></properties>
     </persistence-unit>
 </persistence>
