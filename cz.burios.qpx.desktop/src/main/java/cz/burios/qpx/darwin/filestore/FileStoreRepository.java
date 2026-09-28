@@ -3,6 +3,7 @@ package cz.burios.qpx.darwin.filestore;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -117,6 +118,10 @@ public class FileStoreRepository {
     }
 
     private void bind(PreparedStatement ps, List<Object> values) throws Exception {
-        for (int i = 0; i < values.size(); i++) ps.setObject(i + 1, values.get(i));
+        for (int i = 0; i < values.size(); i++) {
+            Object value = values.get(i);
+            if (value instanceof Instant instant) value = Timestamp.from(instant);
+            ps.setObject(i + 1, value);
+        }
     }
 }
