@@ -99,7 +99,7 @@ public class FileStoreService {
 
     private static void validateName(String name) {
         if (name == null || name.isBlank() || ".".equals(name) || "..".equals(name)
-                || name.contains("/") || name.contains("\") || name.length() > 255) {
+                || name.contains("/") || name.contains("\\") || name.length() > 255) {
             throw new IllegalArgumentException("Invalid file or directory name");
         }
     }
