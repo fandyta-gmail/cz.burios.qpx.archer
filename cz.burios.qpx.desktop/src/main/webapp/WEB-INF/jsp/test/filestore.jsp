@@ -42,6 +42,7 @@
 				api = contextPath + "/api/filestore",
 				selectedDirectoryId = null,
 				tree,
+				treeItems = [],
 				grid;
 			
 			// console.log("contextPath: ", contextPath);
@@ -57,7 +58,18 @@
 				}, o || {}));
 			}
 			function loadDirectories(){
-				return request(api + "/directories").then(buildTree);
+				return loadDirectoryChildren(null).then(buildTree);
+			}
+			function loadDirectoryChildren(parentId) {
+				var options = parentId ? {data:{parentId:parentId}} : {};
+				return request(api + "/directories", options).then(function(directories) {
+					return Promise.all(directories.map(function(d) {
+						return loadDirectoryChildren(d.ID).then(function(children) {
+							d.children = children;
+							return d;
+						});
+					}));
+				});
 			}
 			function buildTree(roots) {
 				var items=[{
@@ -66,14 +78,19 @@
 					text: "Kořen",
 					expanded: true
 				}];
-				roots.forEach(function(d) {
-					items.push({
-						id: d.ID,
-						parentId: "__root__",
-						text: d.NAME,
-						expanded: false
+				function addItems(directories, parentId) {
+					directories.forEach(function(d) {
+						items.push({
+							id: d.ID,
+							parentId: parentId,
+							text: d.NAME,
+							expanded: false
+						});
+						addItems(d.children || [], d.ID);
 					});
-				});
+				}
+				addItems(roots, "__root__");
+				treeItems = items;
 				if(tree) 
 					tree.option("items",items); 
 				else 
@@ -83,7 +100,7 @@
 						selectionMode: "single",
 						onSelectionChanged:function(e) {
 							var key = e.selectedItemKeys && e.selectedItemKeys.length ? e.selectedItemKeys[0] : "__root__";
-							var item = items.find(function(x) {
+							var item = treeItems.find(function(x) {
 								return String(x.id) === String(key);
 							});
 							selectDirectory(key === "__root__" ? null : key, key === "__root__" ? "Kořen" : (item?item.text:key));
