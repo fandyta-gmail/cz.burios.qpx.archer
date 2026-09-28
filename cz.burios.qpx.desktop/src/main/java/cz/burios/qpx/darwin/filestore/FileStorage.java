@@ -59,7 +59,11 @@ public class FileStorage {
             try (OutputStream out = Files.newOutputStream(temp)) {
                 input.transferTo(out);
             }
-            Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE);
+            try {
+                Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                Files.move(temp, target);
+            }
             return target;
         } catch (IOException e) {
             Files.deleteIfExists(temp);
