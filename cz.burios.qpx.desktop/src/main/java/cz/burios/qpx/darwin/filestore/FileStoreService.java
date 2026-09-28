@@ -25,6 +25,9 @@ public class FileStoreService {
     public DynamicRecord createDirectory(String parentId, String name) throws Exception {
         parentId = normalizeId(parentId);
         validateName(name);
+        if (parentId != null && repository.findDirectory(parentId) == null) {
+            throw new IllegalArgumentException("Parent directory not found: " + parentId);
+        }
         String id = newId();
         Instant now = Instant.now();
 
@@ -48,6 +51,12 @@ public class FileStoreService {
 
     public DynamicRecord storeFile(String fileStoreId, String originalName,
             String contentType, InputStream input, long size) throws Exception {
+        if (fileStoreId == null || fileStoreId.isBlank()) {
+            throw new IllegalArgumentException("FileStore directory is required");
+        }
+        if (repository.findDirectory(fileStoreId) == null) {
+            throw new IllegalArgumentException("FileStore directory not found: " + fileStoreId);
+        }
         validateName(originalName);
         if (size < 0) throw new IllegalArgumentException("Invalid file size");
 
