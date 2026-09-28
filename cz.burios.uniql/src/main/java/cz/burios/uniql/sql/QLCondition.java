@@ -1,0 +1,15 @@
+package cz.burios.uniql.sql;
+
+public class QLCondition extends QLExpr {
+    public QLExpr left;
+    public String operator;
+    public QLExpr right;
+
+    public QLCondition() {}
+    public QLCondition(QLExpr left, String operator, QLExpr right) {
+        this.left = left; this.operator = operator; this.right = right;
+    }
+    public QLCondition and(QLCondition other) { return new QLLogical("AND", this, other); }
+    public QLCondition or(QLCondition other) { return new QLLogical("OR", this, other); }
+    @Override public void accept(QLVisitor visitor) { visitor.visit(this); }
+}

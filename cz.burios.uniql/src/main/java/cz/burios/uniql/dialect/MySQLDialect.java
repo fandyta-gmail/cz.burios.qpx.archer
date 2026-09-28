@@ -1,0 +1,36 @@
+package cz.burios.uniql.dialect;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Types;
+import java.util.Locale;
+import cz.burios.uniql.metadata.ColumnGeneration;
+import cz.burios.uniql.metadata.ColumnMetaData;
+import cz.burios.uniql.metadata.ColumnType;
+import cz.burios.uniql.metadata.IndexMetaData;
+import cz.burios.uniql.metadata.TableMetaData;
+
+/** MySQL dialect: JDBC catalog is the database namespace. */
+public class MySQLDialect implements DBDialect {
+    @Override public String name(){return "mysql";}
+    @Override public boolean supportsTransactionalDdl(){return false;}
+    @Override public String tableName(TableMetaData t){return t.database!=null&&!t.database.isBlank()?quote(t.database)+"."+quote(t.name):quote(t.name);}
+    @Override public String tableName(String catalog,String schema,String tableName){return catalog!=null&&!catalog.isBlank()?quote(catalog)+"."+quote(tableName):quote(tableName);}
+    @Override public void loadTableOptions(Connection c,String catalog,String schema,TableMetaData t)throws SQLException{if(catalog==null||catalog.isBlank())return;String sql="SELECT ENGINE,TABLE_COLLATION,TABLE_COMMENT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=? AND TABLE_NAME=?";try(PreparedStatement p=c.prepareStatement(sql)){p.setString(1,catalog);p.setString(2,t.name);try(ResultSet r=p.executeQuery()){if(!r.next())return;String e=r.getString("ENGINE"),co=r.getString("TABLE_COLLATION"),cm=r.getString("TABLE_COMMENT");if(e!=null)t.actualParam("ENGINE",e);if(co!=null){int x=co.indexOf('_');if(x>0)t.actualParam("DEFAULT CHARSET",co.substring(0,x));t.actualParam("COLLATE",co);}if(cm!=null&&!cm.isBlank())t.actualParam("COMMENT","'"+cm.replace("'","''")+"'");}}}
+    @Override public void loadColumnOptions(Connection c,String catalog,String schema,String tableName,ColumnMetaData col)throws SQLException{if(catalog==null||catalog.isBlank())return;String sql="SELECT EXTRA,COLLATION_NAME,COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND COLUMN_NAME=?";try(PreparedStatement p=c.prepareStatement(sql)){p.setString(1,catalog);p.setString(2,tableName);p.setString(3,col.name);try(ResultSet r=p.executeQuery()){if(!r.next())return;String co=r.getString("COLLATION_NAME");if(co!=null&&!co.isBlank())col.collation(co);String ct=r.getString("COLUMN_TYPE");if(ct!=null&&ct.equalsIgnoreCase("tinyint(1)"))col.logicalType=ColumnType.BOOLEAN;String ex=r.getString("EXTRA");if(ex!=null){String n=ex.toLowerCase(Locale.ROOT);if(n.contains("on update current_timestamp"))col.generation(ColumnGeneration.INSERT_UPDATE_TIMESTAMP);else if(col.defaultValue!=null&&col.defaultValue.toLowerCase(Locale.ROOT).contains("current_timestamp"))col.generation(ColumnGeneration.INSERT_TIMESTAMP);}}}}
+    @Override public void loadIndexOptions(Connection c,String catalog,String schema,String tableName,IndexMetaData index)throws SQLException{if(catalog==null||catalog.isBlank()||index==null||index.name==null)return;String sql="SELECT INDEX_TYPE FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND INDEX_NAME=? ORDER BY SEQ_IN_INDEX LIMIT 1";try(PreparedStatement p=c.prepareStatement(sql)){p.setString(1,catalog);p.setString(2,tableName);p.setString(3,index.name);try(ResultSet r=p.executeQuery()){if(r.next()){String method=r.getString("INDEX_TYPE");if(method!=null&&!method.isBlank())index.method(method.toUpperCase(Locale.ROOT));}}}}
+    @Override public ColumnType logicalType(ColumnMetaData c){String n=c.jdbcTypeName!=null?c.jdbcTypeName:c.type;if(n!=null){String t=n.toUpperCase(Locale.ROOT);if(t.startsWith("VARCHAR")||t.startsWith("CHAR"))return ColumnType.STRING;if(t.contains("TEXT"))return ColumnType.TEXT;if(t.startsWith("TINYINT(1)"))return ColumnType.BOOLEAN;if(t.startsWith("TINYINT")||t.startsWith("SMALLINT")||t.startsWith("MEDIUMINT")||t.startsWith("INT"))return ColumnType.INTEGER;if(t.startsWith("BIGINT"))return ColumnType.LONG;if(t.startsWith("DECIMAL")||t.startsWith("NUMERIC"))return ColumnType.DECIMAL;if(t.startsWith("DOUBLE")||t.startsWith("FLOAT"))return ColumnType.DOUBLE;if(t.startsWith("DATETIME"))return ColumnType.DATETIME;if(t.startsWith("TIMESTAMP"))return ColumnType.TIMESTAMP;if(t.startsWith("DATE"))return ColumnType.DATE;if(t.startsWith("TIME"))return ColumnType.TIME;if(t.contains("BINARY")||t.startsWith("BLOB"))return ColumnType.BINARY;}return DBDialect.super.logicalType(c);}
+    @Override public String columnDefinition(ColumnMetaData c){StringBuilder s=new StringBuilder(columnName(c.name)).append(' ').append(type(c));if(c.autoIncrement)s.append(" AUTO_INCREMENT");if(!c.nullable)s.append(" NOT NULL");String g=columnGeneration(c);if(!g.isBlank())s.append(' ').append(g);else if(c.defaultValue!=null)s.append(" DEFAULT ").append(c.defaultValue);if(c.collation!=null&&!c.collation.isBlank()&&isCharacterType(c))s.append(" COLLATE ").append(c.collation);return s.toString();}
+    @Override public String columnGeneration(ColumnMetaData c){return switch(c.generation==null?ColumnGeneration.NONE:c.generation){case NONE->"";case INSERT_TIMESTAMP->"DEFAULT CURRENT_TIMESTAMP";case INSERT_UPDATE_TIMESTAMP->"DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP";};}
+    @Override public String alterColumn(TableMetaData t,ColumnMetaData c){return "ALTER TABLE "+tableName(t)+" MODIFY COLUMN "+columnDefinition(c);}
+    @Override public String alterTableOptions(TableMetaData t){if(t.params.isEmpty())return "";StringBuilder s=new StringBuilder("ALTER TABLE ").append(tableName(t));for(var e:t.params.entrySet())if(e.getValue()!=null)s.append(' ').append(e.getKey()).append('=').append(e.getValue());return s.toString();}
+    @Override public String dropIndex(TableMetaData t,String n){return "DROP INDEX "+indexName(n)+" ON "+tableName(t);} 
+    @Override public String dropPrimaryKey(TableMetaData table) {
+        return "ALTER TABLE " + tableName(table) + " DROP PRIMARY KEY";
+    }
+    @Override public String createIndex(TableMetaData t,IndexMetaData i){StringBuilder s=new StringBuilder("CREATE ");if(i.unique)s.append("UNIQUE ");s.append("INDEX ").append(indexName(i.name));if(i.method!=null&&!i.method.isBlank())s.append(" USING ").append(i.method);s.append(" ON ").append(tableName(t));s.append(" (");for(int x=0;x<i.columns.size();x++){if(x>0)s.append(", ");s.append(columnName(i.columns.get(x)));}return s.append(')').toString();}
+    private boolean isCharacterType(ColumnMetaData c){return c.logicalType==ColumnType.STRING||c.logicalType==ColumnType.TEXT||c.jdbcType==Types.CHAR||c.jdbcType==Types.VARCHAR||c.jdbcType==Types.LONGVARCHAR;}
+    private String type(ColumnMetaData c){if(c.logicalType!=null)return switch(c.logicalType){case STRING->c.length>0?"VARCHAR("+c.length+")":"VARCHAR(255)";case TEXT->"TEXT";case BOOLEAN->"BOOLEAN";case INTEGER->"INT";case LONG->"BIGINT";case DECIMAL->c.precision>0?"DECIMAL("+c.precision+","+Math.max(c.scale,0)+")":"DECIMAL";case DOUBLE->"DOUBLE";case DATE->"DATE";case TIME->"TIME";case DATETIME->"DATETIME";case TIMESTAMP->"TIMESTAMP";case BINARY->c.length>0?"VARBINARY("+c.length+")":"BLOB";};if(c.type!=null&&!c.type.isBlank()&&c.type.matches("[A-Za-z][A-Za-z0-9_]*(\\s*\\(\\s*[0-9]+(?:\\s*,\\s*[0-9]+)?\\s*\\))?"))return c.type.trim();return "TEXT";}
+}
