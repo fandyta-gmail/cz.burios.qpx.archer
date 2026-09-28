@@ -11,20 +11,19 @@ import jakarta.servlet.ServletRegistration;
 
 public class WebAppInitializer implements WebApplicationInitializer {
 
-	@Override
-	public void onStartup(ServletContext servletContext) throws ServletException {
-		AnnotationConfigWebApplicationContext ctx = new AnnotationConfigWebApplicationContext();
-		ctx.register(MvcConfig.class);
+    @Override
+    public void onStartup(ServletContext servletContext) throws ServletException {
+        AnnotationConfigWebApplicationContext ctx = new AnnotationConfigWebApplicationContext();
+        ctx.register(MvcConfig.class);
 
-		ctx.setServletContext(servletContext);
+        ctx.setServletContext(servletContext);
 
-		ServletRegistration.Dynamic dispatcher = servletContext.addServlet("dispatcher", new DispatcherServlet(ctx));
-		dispatcher.setLoadOnStartup(1);
-		dispatcher.addMapping("/");
+        ServletRegistration.Dynamic dispatcher = servletContext.addServlet("dispatcher", new DispatcherServlet(ctx));
+        dispatcher.setLoadOnStartup(1);
+        dispatcher.addMapping("/");
 
-		dispatcher.setMultipartConfig(new MultipartConfigElement("/", 10_000_000, 20_000_000, 0));
+        dispatcher.setMultipartConfig(new MultipartConfigElement("/", 10_000_000, 20_000_000, 0));
 
-		// >>> Registrace DBInitListener <<<
-		// servletContext.addListener(new DBInitListener());
-	}
+        servletContext.addListener(new DBInitListener());
+    }
 }
