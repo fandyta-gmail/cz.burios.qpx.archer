@@ -5,10 +5,11 @@ import java.time.Instant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "FILESTORE_RECORD")
+@Table(name = "FILESTORE_RECORD", indexes = @Index(name = "UX_FILESTORE_RECORD_STORE_NAME", columnList = "FILESTORE_ID,NAME", unique = true))
 public class FileStoreRecord {
     @Id @Column(name = "ID", length = 20, nullable = false) private String id;
     @Column(name = "FILESTORE_ID", length = 20, nullable = false) private String fileStoreId;
