@@ -1,6 +1,6 @@
 package cz.burios.qpx.darwin.filestore;
 
-import java.io.DigestInputStream;
+import java.security.DigestInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.security.MessageDigest;
