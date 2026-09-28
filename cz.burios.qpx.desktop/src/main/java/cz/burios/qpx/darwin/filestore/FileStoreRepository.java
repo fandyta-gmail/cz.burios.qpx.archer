@@ -14,6 +14,7 @@ import cz.burios.uniql.metadata.TableMetaData;
 import cz.burios.uniql.model.DynamicRecord;
 import cz.burios.uniql.sql.QLCondition;
 import cz.burios.uniql.sql.QLInsert;
+import cz.burios.uniql.sql.QLIsNull;
 import cz.burios.uniql.sql.QLSelect;
 import cz.burios.uniql.sql.QLSql;
 import cz.burios.uniql.sql.QLTable;
@@ -83,8 +84,10 @@ public class FileStoreRepository {
         TableMetaData meta = table(tableName);
         QLSelect select = new QLSelect();
         select.from = new QLTable(tableName);
-        select.where = new QLWhere(new QLCondition(
-                new cz.burios.uniql.sql.QLColumn(column), "=", new QLValue(value)));
+        select.where = value == null
+                ? new QLWhere(new QLIsNull(new cz.burios.uniql.sql.QLColumn(column), false))
+                : new QLWhere(new QLCondition(
+                        new cz.burios.uniql.sql.QLColumn(column), "=", new QLValue(value)));
 
         QLSql.Result rendered = QLSql.render(select);
         List<DynamicRecord> result = new ArrayList<>();
