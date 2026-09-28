@@ -38,7 +38,7 @@
 		</div>
 		<script>
 		(function() {
-			var contextPath = "${appPath}",
+			var contextPath = "/${appPath}",
 				api = contextPath + "/api/filestore",
 				selectedDirectoryId = null,
 				tree,
