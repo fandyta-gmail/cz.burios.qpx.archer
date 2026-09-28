@@ -104,7 +104,7 @@ public class FileStoreController {
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
-                .contentLength(record.get("SIZE", Long.class))
+                .contentLength(((Number) record.get("SIZE")).longValue())
                 .headers(headers)
                 .body(new InputStreamResource(input));
     }
