@@ -4,35 +4,38 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
 
+import java.sql.Connection;
+
 import javax.naming.InitialContext;
 import javax.sql.DataSource;
 
 import cz.burios.qpx.darwin.db.DBContext;
-
+import cz.burios.uniql.metadata.DBMetaData;
 
 @WebListener
 public class DBInitListener implements ServletContextListener {
 
-	@Override
-	public void contextInitialized(ServletContextEvent sce) {
-		try {
-			InitialContext ic = new InitialContext();
-			DataSource ds = (DataSource) ic.lookup("java:comp/env/jdbc/JPADataSource");
+    @Override
+    public void contextInitialized(ServletContextEvent sce) {
+        try {
+            InitialContext ic = new InitialContext();
+            DataSource ds = (DataSource) ic.lookup("java:comp/env/jdbc/JPADataSource");
 
-			System.out.println("DBInitListener.contextInitialized().ds: " + ds);
+            try (Connection connection = ds.getConnection()) {
+                DBMetaData metaData = DBMetaData.load(connection);
+                DBContext.setDataSource(ds);
+                DBContext.setMetaData(metaData);
+            }
 
-			DBContext.setDataSource(ds);
-			DBContext.initialize();
-			// sce.getServletContext().setAttribute("DB_CONTEXT", DBContext);
-
-			System.out.println("DBContext initialized with DataSource");
-		} catch (Exception e) {
-			throw new RuntimeException("Failed to initialize DBContext", e);
-		}
-	}
+            System.out.println("DBContext initialized with DataSource and DBMetaData");
+        } catch (Exception e) {
+            DBContext.clear();
+            throw new RuntimeException("Failed to initialize DBContext", e);
+        }
+    }
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-    	DBContext.setDataSource(null);
+        DBContext.clear();
     }
 }
